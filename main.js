@@ -1,22 +1,55 @@
-const cellsSize = 4
-
 const canvas = document.getElementsByTagName("canvas")[0];
 canvas.width = canvas.height = 200;
 const ctx = canvas.getContext('2d');
 
-const gameWidth = canvas.width/cellsSize;
-const gameHeight = canvas.height/cellsSize;
+class Drawer {
+    /**
+     *
+     * @param {CanvasRenderingContext2D} ctx
+     * @param {number} cellsSize
+     */
+    constructor(ctx, cellsSize) {
+        this.ctx = ctx;
+        this.cellsSize = cellsSize;
+    }
+
+    get gameWidth() {
+        return this.ctx.canvas.width/this.cellsSize
+    }
+
+    get gameHeight() {
+        return this.ctx.canvas.height/this.cellsSize
+    }
+
+    /**
+     *
+     * @param {CellMashine} cellMashine
+     */
+    drawCellMashine(cellMashine) {
+        let time = performance.now();
+        for (let cell of cellMashine.cells) {
+            this.drawCell(cell);
+        }
+        time = performance.now() - time;
+        console.log('Время отрисовки = ', time);
+    }
+
+    /**
+     *
+     * @param {Cell} cell
+     * @param {string} color
+     */
+    drawCell(cell, color=cell.color) {
+        this.ctx.fillStyle = color;
+        this.ctx.fillRect(cell.x * this.cellsSize, cell.y * this.cellsSize, this.cellsSize, this.cellsSize);
+    }
+}
 
 class Cell {
     constructor(x, y, color="#000000") {
         this.x = x;
         this.y = y;
         this.color = color;
-    }
-
-    draw(ctx, color=this.color) {
-        ctx.fillStyle = color;
-        ctx.fillRect(this.x * cellsSize, this.y * cellsSize, cellsSize, cellsSize);
     }
 }
 
@@ -37,11 +70,7 @@ class CellMashine {
 
     tick() {
         let time = performance.now();
-
         let cellsClone = this.cells.slice();
-        //let cellsClone = this.cells.deepClone();
-
-
         for (let x = 0; x < this.width; x++) {
             for (let y = 0; y < this.height; y++) {
                 let neighbors_count = getNeighborsCount(x, y, this.cells);
@@ -66,7 +95,14 @@ class CellMashine {
 
     }
 
-    start(interval_time, canvas, ctx) {
+    /**
+     *
+     * @param interval_time
+     * @param canvas
+     * @param ctx
+     * @param {Drawer} drawer
+     */
+    start(interval_time, canvas, ctx, drawer) {
         if (this.interval !== null) {
             clearInterval(this.interval);
             this.interval = null;
@@ -75,19 +111,10 @@ class CellMashine {
         this.interval = setInterval(() => {
             clear(canvas, ctx);
 
-            this.draw(ctx)
+            drawer.drawCellMashine(this);
             this.tick()
 
         }, interval_time)
-    }
-
-    draw(ctx) {
-        let time = performance.now();
-        for (let cell of this.cells) {
-            cell.draw(ctx);
-        }
-        time = performance.now() - time;
-        console.log('Время отрисовки = ', time);
     }
 
 
@@ -95,8 +122,9 @@ class CellMashine {
      *
      * @param el is HTML element to bind controls
      * @param canvas where to draw after tick
+     * @param {Drawer} drawer
      */
-    bindStartStopStepControlsTo(el, canvas) {
+    bindStartStopStepControlsTo(el, canvas, drawer) {
         let ctx = canvas.getContext('2d');
 
         el.addEventListener("keydown",
@@ -107,13 +135,13 @@ class CellMashine {
             (e) => {
                 console.log(e);
                 if (e.key === " ") {
-                    this.start(100, canvas, ctx);
+                    this.start(100, canvas, ctx, drawer);
                 }
 
                 if (e.code === "KeyW") {
                     clear(canvas, ctx);
                     this.tick();
-                    this.draw(ctx);
+                    drawer.drawCellMashine(this);
                 }
             }, false);
     }
@@ -121,15 +149,16 @@ class CellMashine {
     /**
      *
      * @param {HTMLCanvasElement} canvas where to bind spawn and despawn and to draw changes
+     * @param {Drawer} drawer
      */
-    bindSpawnAndDespawnControlsTo(canvas) {
+    bindSpawnAndDespawnControlsTo(canvas, drawer) {
         canvas.oncontextmenu = () => {return false;}
 
         let ctx = canvas.getContext("2d");
 
         let on_left_click = (e) => {
-            let cell_x = Math.trunc(e.offsetX/cellsSize);
-            let cell_y = Math.trunc(e.offsetY/cellsSize);
+            let cell_x = Math.trunc(e.offsetX/drawer.cellsSize);
+            let cell_y = Math.trunc(e.offsetY/drawer.cellsSize);
 
             let cell = findCellOn(cell_x, cell_y, this.cells);
 
@@ -142,12 +171,12 @@ class CellMashine {
 
 
             clear(canvas, ctx);
-            this.draw(ctx);
+            drawer.drawCellMashine(this);
         }
 
         let on_right_click = (e) => {
-            let cell_x = Math.trunc(e.offsetX/cellsSize);
-            let cell_y = Math.trunc(e.offsetY/cellsSize);
+            let cell_x = Math.trunc(e.offsetX/drawer.cellsSize);
+            let cell_y = Math.trunc(e.offsetY/drawer.cellsSize);
 
             let cell = findCellOn(cell_x, cell_y, this.cells);
 
@@ -158,7 +187,7 @@ class CellMashine {
             }
 
             clear(canvas, ctx);
-            this.draw(ctx)
+            drawer.drawCellMashine(this);
         }
 
         canvas.addEventListener("click", (e) => {
@@ -231,10 +260,11 @@ function getNeighborsCount(x, y, cells) {
     return neighbors_count;
 }
 
-let mashine = new CellMashine([...cells], gameWidth, gameHeight);//cells, 10, 10);
+let drawer = new Drawer(ctx, 4);
+let mashine = new CellMashine([...cells], drawer.gameWidth, drawer.gameHeight);//cells, 10, 10);
 
-mashine.draw(ctx);
-mashine.bindSpawnAndDespawnControlsTo(canvas);
-mashine.bindStartStopStepControlsTo(document, canvas);
+drawer.drawCellMashine(mashine);
+mashine.bindSpawnAndDespawnControlsTo(canvas, drawer);
+mashine.bindStartStopStepControlsTo(document, canvas, drawer);
 
 
