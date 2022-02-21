@@ -23,11 +23,11 @@ class Drawer {
 
     /**
      *
-     * @param {CellMashine} cellMashine
+     * @param {CellMachine} cellMachine
      */
-    drawCellMashine(cellMashine) {
+    drawCellMachine(cellMachine) {
         let time = performance.now();
-        for (let cell of cellMashine.cells) {
+        for (const cell of cellMachine.cells) {
             this.drawCell(cell);
         }
         time = performance.now() - time;
@@ -53,7 +53,7 @@ class Cell {
     }
 }
 
-class CellMashine {
+class CellMachine {
     /**
      *
      * @param {Array.<Cell>} cells
@@ -78,7 +78,7 @@ class CellMashine {
                 let cell = findCellOn(x, y, this.cells);
 
                 if (cell === null) {
-                    if (neighbors_count >= 3) {
+                    if (neighbors_count === 3) {
                         cellsClone.push(new Cell(x, y))
                     }
                 } else {
@@ -111,7 +111,7 @@ class CellMashine {
         this.interval = setInterval(() => {
             clear(canvas, ctx);
 
-            drawer.drawCellMashine(this);
+            drawer.drawCellMachine(this);
             this.tick()
 
         }, interval_time)
@@ -141,7 +141,7 @@ class CellMashine {
                 if (e.code === "KeyW") {
                     clear(canvas, ctx);
                     this.tick();
-                    drawer.drawCellMashine(this);
+                    drawer.drawCellMachine(this);
                 }
             }, false);
     }
@@ -171,7 +171,7 @@ class CellMashine {
 
 
             clear(canvas, ctx);
-            drawer.drawCellMashine(this);
+            drawer.drawCellMachine(this);
         }
 
         let on_right_click = (e) => {
@@ -187,7 +187,7 @@ class CellMashine {
             }
 
             clear(canvas, ctx);
-            drawer.drawCellMashine(this);
+            drawer.drawCellMachine(this);
         }
 
         canvas.addEventListener("click", (e) => {
@@ -212,7 +212,7 @@ class CellMashine {
     }
 }
 
-let cells = []
+let cells = [];
 
 function clear(canvas, ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -260,11 +260,11 @@ function getNeighborsCount(x, y, cells) {
     return neighbors_count;
 }
 
-let drawer = new Drawer(ctx, 4);
-let mashine = new CellMashine([...cells], drawer.gameWidth, drawer.gameHeight);//cells, 10, 10);
+const drawer = new Drawer(ctx, 4);
+const machine = new CellMachine([...cells], drawer.gameWidth, drawer.gameHeight);//cells, 10, 10);
 
-drawer.drawCellMashine(mashine);
-mashine.bindSpawnAndDespawnControlsTo(canvas, drawer);
-mashine.bindStartStopStepControlsTo(document, canvas, drawer);
+drawer.drawCellMachine(machine);
+machine.bindSpawnAndDespawnControlsTo(canvas, drawer);
+machine.bindStartStopStepControlsTo(document, canvas, drawer);
 
 
