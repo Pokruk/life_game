@@ -27,72 +27,107 @@ class Drawer {
      */
     drawCellMachine(cellMachine) {
         let time = performance.now();
-        for (const cell of cellMachine.cells) {
-            this.drawCell(cell);
+        for (let line = 0; line < cellMachine.height; line++) {
+            for (let cell_i = 0; cell_i < cellMachine.width; cell_i++) {
+                let cell = cellMachine.getCellOn(line, cell_i);//line, cell_i);
+                if (cell.isDead) {
+                    continue;
+                }
+                this.ctx.fillStyle = cell.color;
+                this.ctx.fillRect(line * this.cellsSize, cell_i * this.cellsSize, this.cellsSize, this.cellsSize);
+            }
         }
         time = performance.now() - time;
         console.log('Время отрисовки = ', time);
     }
-
-    /**
-     *
-     * @param {Cell} cell
-     * @param {string} color
-     */
-    drawCell(cell, color=cell.color) {
-        this.ctx.fillStyle = color;
-        this.ctx.fillRect(cell.x * this.cellsSize, cell.y * this.cellsSize, this.cellsSize, this.cellsSize);
-    }
 }
 
 class Cell {
-    constructor(x, y, color="#000000") {
-        this.x = x;
-        this.y = y;
+    /**
+     *
+     * @param {string} color
+     * @param {boolean} isDead
+     */
+    constructor(color="#000000", isDead) {
         this.color = color;
+        this.isDead = isDead;
     }
 }
 
 class CellMachine {
     /**
      *
-     * @param {Array.<Cell>} cells
+     * @param {Array<Array.<Cell>>} cells
      * @param {number} width
      * @param {number} height
      */
     constructor(cells, width, height) {
-        this.cells = cells;
         this.width = width;
         this.height = height;
+
+        this._cells = [];
+
+        for (let x = 0; x < this.width; x++) {
+            this._cells.push([]);
+            for (let y = 0; y < this.height; y++) {
+                this._cells[x].push(new Cell("#000000", true));
+            }
+        }
 
         this.interval = null;
     }
 
+    getCellOn(x, y) {
+        let cells = this._cells
+        let cell = cells[x][y]
+        if (cell === undefined) {
+            throw new Error(`Out of range, given x = ${x}, y = ${y}, gameSize x = ${cells.length}, y = ${cells[0].length}`);
+        }
+        return cell;
+    }
+
+    getNeighborsCount(x, y) {
+        let neighbors_count = 0
+        for (let x_dif of [0, 1, -1]) {
+            for (let y_dif of [0, 1, -1]) {
+                if (x_dif === 0 && y_dif === 0) continue;
+                let target_x = x + x_dif
+                let target_y = y + y_dif
+                if (target_x < 0 || target_x >= this.width || target_y < 0 || target_y >= this.height) continue;
+                if (this.getCellOn(target_x, target_y).isDead === false) {neighbors_count++}
+            }
+        }
+
+        return neighbors_count;
+    }
+
     tick() {
         let time = performance.now();
-        let cellsClone = this.cells.slice();
+        /**
+         *
+         * @type {Array<Array<Cell>>}
+         */
+        let cellsClone = deepClone(this._cells);
         for (let x = 0; x < this.width; x++) {
             for (let y = 0; y < this.height; y++) {
-                let neighbors_count = getNeighborsCount(x, y, this.cells);
+                let neighbors_count = this.getNeighborsCount(x, y);
 
-                let cell = findCellOn(x, y, this.cells);
+                let cell = this.getCellOn(x,y);
 
-                if (cell === null) {
+                if (cell.isDead) {
                     if (neighbors_count === 3) {
-                        cellsClone.push(new Cell(x, y))
+                        cellsClone[x][y].isDead = false;
                     }
                 } else {
                     if (![2,3].includes(neighbors_count)) {
-                        cellsClone.remove(cell);
+                        cellsClone[x][y].isDead = true;
                     }
                 }
             }
         }
-        this.cells = cellsClone;
+        this._cells = cellsClone;
         time = performance.now() - time;
         console.log('Время тика = ', time);
-
-
     }
 
     /**
@@ -160,15 +195,13 @@ class CellMachine {
             let cell_x = Math.trunc(e.offsetX/drawer.cellsSize);
             let cell_y = Math.trunc(e.offsetY/drawer.cellsSize);
 
-            let cell = findCellOn(cell_x, cell_y, this.cells);
+            let cell = this.getCellOn(cell_x, cell_y);
 
-            if (cell === null) {
-                this.cells.push(new Cell(cell_x, cell_y));
+            if (cell.isDead) {
+                this.getCellOn(cell_x, cell_y).isDead = false;
             } else {
                 return;
             }
-
-
 
             clear(canvas, ctx);
             drawer.drawCellMachine(this);
@@ -178,10 +211,10 @@ class CellMachine {
             let cell_x = Math.trunc(e.offsetX/drawer.cellsSize);
             let cell_y = Math.trunc(e.offsetY/drawer.cellsSize);
 
-            let cell = findCellOn(cell_x, cell_y, this.cells);
+            let cell = this.getCellOn(cell_x, cell_y);
 
-            if (cell !== null) {
-                this.cells.remove(cell);
+            if (cell.isDead === false) {
+                this.getCellOn(cell_x, cell_y).isDead = true;
             } else {
                 return
             }
@@ -212,59 +245,26 @@ class CellMachine {
     }
 }
 
-let cells = [];
-
 function clear(canvas, ctx) {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 }
 
-function findCellOn(x, y, cells) {
-    for (let cell of cells) {
-        if (cell.x === x && cell.y === y) {
-            return cell;
+function deepClone(cells2d) {
+    const clone = []
+    for (let x = 0; x < cells2d.length; x++) {
+        clone[x] = []
+        for (let y = 0; y < cells2d[x].length; y++) {
+            let cell = cells2d[x][y]
+            clone[x].push(Object.assign(Object.create(cell), cell));
         }
-    }
-
-    return null;
-}
-
-Array.prototype.remove = function (item) {
-    const index = this.indexOf(item);
-    if (index > -1) {
-        this.splice(index, 1);
-        return true;
-    } else {
-        return false;
-    }
-}
-
-Array.prototype.deepClone = function () {
-    let clone = []
-    for (let el of this) {
-        clone.push(Object.assign(Object.create(el), el))
     }
 
     return clone;
 }
 
-
-function getNeighborsCount(x, y, cells) {
-    let neighbors_count = 0
-    for (let x_dif of [0, 1, -1]) {
-        for (let y_dif of [0, 1, -1]) {
-            if (x_dif === 0 && y_dif === 0) {continue;}
-            if (findCellOn(x + x_dif, y + y_dif, cells) !== null) {neighbors_count++}
-        }
-    }
-
-    return neighbors_count;
-}
-
 const drawer = new Drawer(ctx, 4);
-const machine = new CellMachine([...cells], drawer.gameWidth, drawer.gameHeight);//cells, 10, 10);
+const machine = new CellMachine([], drawer.gameWidth, drawer.gameHeight);
 
 drawer.drawCellMachine(machine);
 machine.bindSpawnAndDespawnControlsTo(canvas, drawer);
 machine.bindStartStopStepControlsTo(document, canvas, drawer);
-
-
