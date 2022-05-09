@@ -53,7 +53,7 @@ class CellMachine {
 
     _cells: Cell[][];
 
-    constructor(cells: Cell[][], width: number, height: number) {
+    constructor(width: number, height: number) {
         this.width = width;
         this.height = height;
 
@@ -237,7 +237,7 @@ function deepClone(cells2d): Cell[][] {
 }
 
 const drawer = new Drawer(ctx, 4);
-const machine = new CellMachine([], drawer.gameWidth, drawer.gameHeight);
+const machine = new CellMachine(drawer.gameWidth, drawer.gameHeight);
 
 drawer.drawCellMachine(machine);
 machine.bindSpawnAndDespawnControlsTo(canvas, drawer);

@@ -47,7 +47,7 @@ var Cell = /** @class */ (function () {
     return Cell;
 }());
 var CellMachine = /** @class */ (function () {
-    function CellMachine(cells, width, height) {
+    function CellMachine(width, height) {
         this.width = width;
         this.height = height;
         this._cells = [];
@@ -215,7 +215,7 @@ function deepClone(cells2d) {
     return clone;
 }
 var drawer = new Drawer(ctx, 4);
-var machine = new CellMachine([], drawer.gameWidth, drawer.gameHeight);
+var machine = new CellMachine(drawer.gameWidth, drawer.gameHeight);
 drawer.drawCellMachine(machine);
 machine.bindSpawnAndDespawnControlsTo(canvas, drawer);
 machine.bindStartStopStepControlsTo(document, canvas, drawer);
